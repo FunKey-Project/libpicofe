@@ -73,8 +73,8 @@ int plat_get_skin_dir(char *dst, int len)
 	return ret + sizeof("skin/") - 1;
 }
 
-#ifndef PICO_HOME_DIR
-#define PICO_HOME_DIR "/.picodrive/"
+#ifndef PCSX_CFG_HOME_DIR
+#define PCSX_CFG_HOME_DIR "/.pcsx/"
 #endif
 int plat_get_root_dir(char *dst, int len)
 {
@@ -83,7 +83,7 @@ int plat_get_root_dir(char *dst, int len)
 	int ret;
 
 	if (home != NULL) {
-		ret = snprintf(dst, len, "%s%s", home, PICO_HOME_DIR);
+		ret = snprintf(dst, len, "%s%s", home, PCSX_CFG_HOME_DIR);
 		if (ret >= len)
 			ret = len - 1;
 		mkdir(dst, 0755);
