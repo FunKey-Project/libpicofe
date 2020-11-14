@@ -35,6 +35,20 @@ static int vout_mode_overlay = -1, vout_mode_gl = -1;
 static void *display, *window;
 static int gl_quirks;
 
+
+void clear_screen(uint16_t color)
+{
+  uint16_t *dest_ptr = (uint16_t *)plat_sdl_screen->pixels;
+  uint32_t x, y;
+
+  for(y = 0; y < plat_sdl_screen->h; y++)
+  {
+    for(x = 0; x < plat_sdl_screen->w; x++, dest_ptr++)
+    {
+      *dest_ptr = color;
+    }
+  }
+}
 /* w, h is layer resolution */
 int plat_sdl_change_video_mode(int w, int h, int force)
 {
@@ -89,7 +103,12 @@ int plat_sdl_change_video_mode(int w, int h, int force)
     // (seen on r-pi)
     SDL_PumpEvents();
 
-    plat_sdl_screen = SDL_SetVideoMode(win_w, win_h, 0, flags);
+    //plat_sdl_screen = SDL_SetVideoMode(win_w, win_h, 0, flags);
+    if (plat_sdl_screen)
+      SDL_FreeSurface(plat_sdl_screen);
+    printf("Creating a surface like this: win_w=%d, win_h=%d", win_w, win_h);
+    plat_sdl_screen = SDL_CreateRGBSurface(flags,
+      win_w, win_h, 0, 0xFFFF, 0xFFFF, 0xFFFF, 0);
     if (plat_sdl_screen == NULL) {
       fprintf(stderr, "SDL_SetVideoMode failed: %s\n", SDL_GetError());
       plat_target.vout_method = 0;
@@ -120,7 +139,11 @@ int plat_sdl_change_video_mode(int w, int h, int force)
   if (plat_target.vout_method == 0) {
     SDL_PumpEvents();
 
-    plat_sdl_screen = SDL_SetVideoMode(w, h, 16, SDL_HWSURFACE | SDL_DOUBLEBUF);
+    //plat_sdl_screen = SDL_SetVideoMode(w, h, 16, SDL_HWSURFACE | SDL_DOUBLEBUF);
+    if (plat_sdl_screen)
+      SDL_FreeSurface(plat_sdl_screen);
+    plat_sdl_screen = SDL_CreateRGBSurface(SDL_SWSURFACE,
+      w, h, 16, 0xFFFF, 0xFFFF, 0xFFFF, 0);
     if (plat_sdl_screen == NULL) {
       fprintf(stderr, "SDL_SetVideoMode failed: %s\n", SDL_GetError());
       return -1;
@@ -183,11 +206,14 @@ int plat_sdl_init(void)
   int gl_works = 0;
   int i, ret, h;
 
-  ret = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
+  //ret = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
+  ret = SDL_Init(SDL_INIT_VIDEO);
   if (ret != 0) {
     fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
     return -1;
   }
+
+  SDL_ShowCursor(0);
 
   info = SDL_GetVideoInfo();
   if (info != NULL) {
@@ -196,7 +222,7 @@ int plat_sdl_init(void)
     printf("plat_sdl: using %dx%d as fullscreen resolution\n", fs_w, fs_h);
   }
 
-  g_menuscreen_w = 640;
+  /*g_menuscreen_w = 640;
   if (fs_w != 0 && g_menuscreen_w > fs_w)
     g_menuscreen_w = fs_w;
   g_menuscreen_h = 480;
@@ -206,11 +232,16 @@ int plat_sdl_init(void)
       h -= WM_DECORATION_H;
     if (g_menuscreen_h > h)
       g_menuscreen_h = h;
-  }
+  }**/
+  g_menuscreen_w = 640;
+  g_menuscreen_h = 480;
 
   ret = plat_sdl_change_video_mode(g_menuscreen_w, g_menuscreen_h, 1);
   if (ret != 0) {
-    plat_sdl_screen = SDL_SetVideoMode(0, 0, 16, SDL_SWSURFACE);
+    //plat_sdl_screen = SDL_SetVideoMode(0, 0, 16, SDL_SWSURFACE);
+    if (plat_sdl_screen)
+      SDL_FreeSurface(plat_sdl_screen);
+    plat_sdl_screen = SDL_CreateRGBSurface(SDL_SWSURFACE, 0, 0, 16, 0xFFFF, 0xFFFF, 0xFFFF, 0);
     if (plat_sdl_screen == NULL) {
       fprintf(stderr, "SDL_SetVideoMode failed: %s\n", SDL_GetError());
       goto fail;
@@ -226,8 +257,11 @@ int plat_sdl_init(void)
   g_menuscreen_h = window_h = plat_sdl_screen->h;
 
   // overlay/gl require native bpp in some cases..
-  plat_sdl_screen = SDL_SetVideoMode(g_menuscreen_w, g_menuscreen_h,
-    0, plat_sdl_screen->flags);
+  //plat_sdl_screen = SDL_SetVideoMode(g_menuscreen_w, g_menuscreen_h, 0, plat_sdl_screen->flags);
+  if (plat_sdl_screen)
+    SDL_FreeSurface(plat_sdl_screen);
+  plat_sdl_screen = SDL_CreateRGBSurface(SDL_SWSURFACE,
+    g_menuscreen_w, g_menuscreen_h, 0, 0xFFFF, 0xFFFF, 0xFFFF, 0);
   if (plat_sdl_screen == NULL) {
     fprintf(stderr, "SDL_SetVideoMode failed: %s\n", SDL_GetError());
     goto fail;
